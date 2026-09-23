@@ -3,11 +3,13 @@ from pydantic import BaseModel
 
 from analytics.metrics import packet_loss, summarize_latency
 from analytics.path import hop_count
+from analytics.pcap_reader import summarize_pcap
+from analytics.timeseries import experiment_summary, group_metric_series
 from storage.store import recent, record
 from telemetry.ping import result_dict, run_ping
 from telemetry.routes import inspect_route
 
-app = FastAPI(title="NetFabric API", version="0.4.0")
+app = FastAPI(title="NetFabric API", version="0.5.0")
 
 
 class PingRequest(BaseModel):
@@ -30,6 +32,10 @@ class MeasurementRequest(BaseModel):
     target: str | None = None
 
 
+class PcapRequest(BaseModel):
+    path: str
+
+
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "netfabric-api"}
@@ -49,22 +55,10 @@ def metrics_summary() -> dict:
 def ping(request: PingRequest) -> dict:
     try:
         result = run_ping(request.target, request.count)
-        record(
-            request.experiment_id,
-            "latency_avg",
-            result.avg_ms or 0.0,
-            "ms",
-            "icmp",
-            request.target,
-        )
-        record(
-            request.experiment_id,
-            "packet_loss",
-            result.loss_pct,
-            "percent",
-            "icmp",
-            request.target,
-        )
+        record(request.experiment_id, "latency_avg", result.avg_ms or 0.0,
+               "ms", "icmp", request.target)
+        record(request.experiment_id, "packet_loss", result.loss_pct,
+               "percent", "icmp", request.target)
         return result_dict(result)
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -87,20 +81,33 @@ def route_inspect(request: RouteRequest) -> dict:
 
 @app.post("/api/v1/measurements")
 def add_measurement(request: MeasurementRequest) -> dict:
-    record(
-        request.experiment_id,
-        request.metric,
-        request.value,
-        request.unit,
-        request.source,
-        request.target,
-    )
+    record(request.experiment_id, request.metric, request.value,
+           request.unit, request.source, request.target)
     return {"status": "recorded"}
 
 
 @app.get("/api/v1/measurements")
 def measurements(experiment_id: str | None = None, limit: int = 100) -> list[dict]:
     return recent(experiment_id, limit)
+
+
+@app.get("/api/v1/analytics/series")
+def series(metric: str = "latency_avg", limit: int = 500) -> dict:
+    rows = recent(limit=limit)
+    return {"metric": metric, "series": group_metric_series(rows, metric)}
+
+
+@app.get("/api/v1/analytics/experiments")
+def experiment_comparison(limit: int = 500) -> list[dict]:
+    return experiment_summary(recent(limit=limit))
+
+
+@app.post("/api/v1/analytics/pcap")
+def pcap_analysis(request: PcapRequest) -> dict:
+    try:
+        return summarize_pcap(request.path)
+    except (OSError, RuntimeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @app.get("/api/v1/metrics")
