@@ -1,8 +1,15 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 
 from analytics.metrics import packet_loss, summarize_latency
+from telemetry.ping import result_dict, run_ping
 
-app = FastAPI(title="NetFabric API", version="0.1.0")
+app = FastAPI(title="NetFabric API", version="0.2.0")
+
+
+class PingRequest(BaseModel):
+    target: str
+    count: int = 5
 
 
 @app.get("/health")
@@ -20,12 +27,20 @@ def metrics_summary() -> dict:
     }
 
 
+@app.post("/api/v1/measurements/ping")
+def ping(request: PingRequest) -> dict:
+    try:
+        return result_dict(run_ping(request.target, request.count))
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
 @app.get("/api/v1/metrics")
 def metrics() -> dict:
     return {
         "status": "ready",
         "source": "lab",
-        "note": "Live collectors are introduced in the telemetry milestone.",
+        "note": "Metrics are collected from network experiments.",
     }
 
 
@@ -35,6 +50,6 @@ def experiments() -> list[dict[str, str]]:
         {
             "id": "link-failure",
             "name": "Controlled link failure",
-            "status": "planned",
+            "status": "available",
         }
     ]
