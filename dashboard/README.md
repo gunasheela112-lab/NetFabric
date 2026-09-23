@@ -1,13 +1,34 @@
-# NetFabric operator dashboard
+# NetFabric Operations Console
 
-The dashboard is intentionally downstream from the network.
+A lightweight operator-facing dashboard for the NetFabric lab.
 
-Planned panels:
+## Run
 
-1. **Topology** — routers, links and link state.
-2. **Routing** — selected route, next hop and protocol.
-3. **Traffic** — throughput, latency and loss.
-4. **Resilience** — failure event and measured convergence.
-5. **Evidence** — raw experiment artifacts and timestamps.
+Start the API:
 
-The first implementation should consume the FastAPI endpoints rather than maintaining a second source of network state.
+```bash
+uvicorn api.main:app --reload
+```
+
+Serve the dashboard directory with any static HTTP server:
+
+```bash
+python -m http.server 8080 --directory dashboard
+```
+
+Open the dashboard at `http://localhost:8080`.
+
+The browser calls the FastAPI service at `http://localhost:8000` by default. Set `window.NETFABRIC_API` before loading `app.js` if the API is hosted elsewhere.
+
+## Design
+
+The dashboard deliberately does not own network state. It requests route and measurement data from the API, which in turn reads the lab/measurement layer.
+
+Panels cover:
+
+- topology
+- routing state
+- latency and packet loss
+- experiment status
+
+The next UI iteration can add historical charts once persistent experiment storage is introduced.
