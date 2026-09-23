@@ -6,9 +6,7 @@ async function get(path, options = {}) {
   return response.json();
 }
 
-function set(id, value) {
-  document.getElementById(id).textContent = value;
-}
+const set = (id, value) => document.getElementById(id).textContent = value;
 
 async function loadSummary() {
   try {
@@ -26,24 +24,42 @@ async function loadSummary() {
 
 async function loadHistory() {
   const target = document.getElementById("history");
-  if (!target) return;
-
   try {
     const rows = await get("/api/v1/measurements?limit=20");
-    if (!rows.length) {
-      target.innerHTML = "<p class='note'>No persisted measurements yet. Run a lab measurement.</p>";
-      return;
-    }
-
-    target.innerHTML = rows.map(row =>
+    target.innerHTML = rows.length ? rows.map(row =>
       '<div class="history-row"><span>' + row.metric +
       '</span><strong>' + Number(row.value).toFixed(2) + ' ' + row.unit +
       '</strong><small>' + row.experiment_id + ' · ' +
       new Date(row.timestamp).toLocaleString() + '</small></div>'
+    ).join("") : "<p class='note'>No persisted measurements yet. Run a lab measurement.</p>";
+  } catch { target.innerHTML = "<p class='note'>Measurement history unavailable.</p>"; }
+}
+
+async function loadSeries() {
+  const chart = document.getElementById("chart");
+  try {
+    const data = await get("/api/v1/analytics/series?metric=latency_avg&limit=50");
+    const values = Object.values(data.series).flat().map(item => Number(item.value));
+    if (!values.length) return;
+    const max = Math.max(...values, 0.1);
+    chart.innerHTML = values.map(value =>
+      '<div class="bar" title="' + value.toFixed(2) + ' ms" style="height:' +
+      Math.max(8, value / max * 100) + '%"></div>'
     ).join("");
-  } catch {
-    target.innerHTML = "<p class='note'>Measurement history unavailable.</p>";
-  }
+  } catch { chart.innerHTML = "<p class='note'>Time series unavailable.</p>"; }
+}
+
+async function loadComparison() {
+  const target = document.getElementById("comparison");
+  try {
+    const rows = await get("/api/v1/analytics/experiments?limit=500");
+    target.innerHTML = rows.length ? rows.map(row =>
+      '<div class="comparison-row"><strong>' + row.experiment_id +
+      '</strong><span>mean ' + row.mean.toFixed(2) +
+      '</span><span>range ' + row.minimum.toFixed(2) + '–' +
+      row.maximum.toFixed(2) + '</span></div>'
+    ).join("") : "<p class='note'>No experiment history yet.</p>";
+  } catch { target.innerHTML = "<p class='note'>Comparison unavailable.</p>"; }
 }
 
 async function loadExperiments() {
@@ -55,9 +71,7 @@ async function loadExperiments() {
       '</strong><span class="badge">' + item.status.toUpperCase() +
       "</span><br><small>" + item.id + "</small></div>"
     ).join("");
-  } catch {
-    target.innerHTML = "<p class='note'>API unavailable.</p>";
-  }
+  } catch { target.innerHTML = "<p class='note'>API unavailable.</p>"; }
 }
 
 document.getElementById("inspect").addEventListener("click", async () => {
@@ -69,8 +83,7 @@ document.getElementById("inspect").addEventListener("click", async () => {
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({router: "r1", destination: "10.20.20.20"})
     });
-    box.innerHTML =
-      '<code>Protocol: ' + (data.protocol || "unknown") +
+    box.innerHTML = '<code>Protocol: ' + (data.protocol || "unknown") +
       '<br>Next hop: ' + (data.next_hops.join(", ") || "none") +
       '<br>Interface: ' + (data.interfaces.join(", ") || "unknown") +
       '<br>Observed hops: ' + data.hop_count + "</code>";
@@ -81,4 +94,6 @@ document.getElementById("inspect").addEventListener("click", async () => {
 
 loadSummary();
 loadHistory();
+loadSeries();
+loadComparison();
 loadExperiments();
