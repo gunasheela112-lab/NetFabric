@@ -1,173 +1,163 @@
-# NetFabric — Network Engineering & Traffic Intelligence Lab
+# NetFabric
 
-A reproducible network engineering lab for building virtual routed topologies, generating traffic, measuring performance, inspecting routing behaviour, and testing resilience through controlled failures.
+## Network Engineering & Traffic Intelligence Lab
 
-**Primary focus:** networking · routing · telemetry · traffic engineering · automation
+NetFabric is a reproducible virtual network lab for studying **routing, traffic behaviour, telemetry and network resilience**.
 
-> NetFabric is built around the network itself. The API and dashboard consume measurements from the lab; they do not simulate network state in the frontend.
+Instead of simulating a network entirely inside a dashboard, NetFabric runs a small routed topology with FRRouting, generates measurable traffic, collects network evidence and exposes the observations through an API and operations console.
 
-## What this demonstrates
+### What it demonstrates
 
-- Linux networking and virtual interfaces
-- IPv4 subnetting and multi-segment routing
-- FRRouting (FRR) and OSPF
-- Route inspection and convergence experiments
-- Real ICMP and iperf3 traffic through the virtual topology
-- Packet capture with tcpdump
-- Flow/protocol analytics
+- Linux/container networking
+- IPv4 subnetting and routed segments
+- FRRouting
+- OSPF
+- Route and next-hop inspection
+- ICMP and iperf3 measurements
+- Latency, packet loss and throughput analysis
+- PCAP capture and protocol analysis
+- Persistent experiment history
 - Controlled link-failure testing
-- Python automation and REST APIs
-- Unit tests and GitHub Actions CI
-- Reproducible experiment artifacts
+- Route convergence observation
+- Network operations dashboard
+- Python/FastAPI automation
+- Automated tests and CI
 
 ## Architecture
 
 ```text
- client + iperf3
-  10.10.10.10
-       |
-     [ R1 ]
-     /    \
-   [R2]  [R3]
-     \    /
-     [ R4 ]
-       |
- server + iperf3
-  10.20.20.20
+                    ┌───────────────┐
+                    │ Traffic /     │
+                    │ Test Endpoints│
+                    └───────┬───────┘
+                            │
+                       ┌────▼────┐
+                       │   R1    │
+                       │  FRR    │
+                       └──┬───┬──┘
+                          │   │
+                    ┌─────▼┐ ┌▼─────┐
+                    │  R2  │ │  R3  │
+                    │ FRR  │ │ FRR  │
+                    └───┬──┘ └──┬───┘
+                        │        │
+                        └───┬────┘
+                            │
+                       ┌────▼────┐
+                       │   R4    │
+                       │  FRR    │
+                       └────┬────┘
+                            │
+                       ┌────▼────┐
+                       │ Endpoint│
+                       └─────────┘
 
-       | telemetry
-       v
- Python collectors
-       |
-       +--> latency / loss
-       +--> throughput
-       +--> PCAP / flow analysis
-       +--> route observations
-       |
-     FastAPI
-       |
-   operator UI
+          routing / traffic / packet evidence
+                         │
+                    ┌────▼────┐
+                    │Telemetry│
+                    └────┬────┘
+                         │
+                    ┌────▼────┐
+                    │Analytics│
+                    └────┬────┘
+                         │
+                    ┌────▼────┐
+                    │ FastAPI │
+                    └────┬────┘
+                         │
+                    ┌────▼────┐
+                    │ Console │
+                    └─────────┘
 ```
 
-The topology has two routed paths between R1 and R4. This creates a controlled environment for observing route selection, failure recovery and convergence.
+## Signature experiment: controlled link failure
+
+The topology contains redundant paths. A failure experiment deliberately disables a routed interface and observes:
+
+1. failure injection
+2. route-state change
+3. alternate-path selection
+4. traffic recovery
+5. convergence time
+6. before/after evidence
+
+The result is saved as machine-readable JSON alongside the raw route observations.
 
 ## Quick start
 
-Prerequisites: Linux, Docker, Containerlab, Python 3.11+ and iperf3.
+Install the Python dependencies:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements.txt
-chmod +x scripts/*.sh traffic/*.sh simulations/*.sh experiments/*.sh
-
-./scripts/lab_up.sh
 ```
 
-Inspect routing:
+Run the unit tests:
 
-```bash
-./scripts/show_routes.sh
+```pytest -q
 ```
 
-Generate routed traffic:
+For the full network lab, see **[docs/lab.md](docs/lab.md)**.
 
-```bash
-./traffic/run_ping.sh
-./traffic/run_iperf.sh
-```
+Start the API:
 
-Run the resilience experiment:
+```uvicorn api.main:app --reload```
 
-```bash
-./experiments/run_resilience.sh
-```
+Serve the console:
 
-Run tests:
+```python -m http.server 8080 --directory dashboard```
 
-```bash
-pytest -q
-```
+Then open port 8080 locally.
 
-Remove the lab:
+## API surface
 
-```bash
-./scripts/lab_down.sh
-```
-
-## Signature experiment
-
-NetFabric's main experiment deliberately removes one redundant link while traffic is flowing.
-
-The experiment records:
-
-- route before failure
-- failure timestamp
-- route after failure
-- packet loss during the event
-- latency before/after
-- restoration timestamp
-- final route
-
-The objective is to observe routing convergence and resilience from actual lab behaviour rather than from a precomputed visualization.
-
-## Measurement pipeline
-
-```text
-Virtual network
-     |
-     +-- ping ----------> RTT / packet loss
-     |
-     +-- iperf3 --------> throughput
-     |
-     +-- tcpdump --------> PCAP
-     |
-     +-- FRR ------------> route state
-             |
-             v
-       Python analytics
-             |
-             v
-          FastAPI
-```
-
-Raw observations remain distinct from derived metrics so experiments can be audited and repeated.
-
-## Project structure
-
-```text
-topology/       Containerlab topology
-routing/        FRR configuration
-traffic/        Real traffic scenarios
-telemetry/      Network measurement collectors
-analytics/      Metric and flow calculations
-experiments/    Resilience experiments
-api/            FastAPI service
-simulations/    Manual failure controls
-tests/          Automated tests
-docs/           Engineering documentation
-scripts/        Lab lifecycle helpers
-```
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | service health |
+| `POST /api/v1/routes/inspect` | inspect a router's route |
+| `POST /api/v1/measurements/ping` | run and persist an ICMP measurement |
+| `POST /api/v1/measurements` | record a measurement |
+| `GET /api/v1/measurements` | retrieve experiment evidence |
+| `GET /api/v1/analytics/series` | time-series data |
+| `GET /api/v1/analytics/experiments` | experiment comparison |
+| `POST /api/v1/analytics/pcap` | summarize a PCAP |
 
 ## Engineering principles
 
-- Measure the network; don't fabricate telemetry.
-- Keep routing behaviour inside the virtual network.
-- Preserve raw experiment evidence.
-- Make failure scenarios reproducible.
-- Clearly distinguish lab measurements from production benchmarks.
-- Prefer inspectable engineering over unnecessary abstraction.
-- Avoid AI/ML unless a demonstrated networking problem justifies it.
+**Network first.** The dashboard is a consumer of network state, not the source of it.
 
-## Current status
+**Evidence over claims.** Measurements are timestamped and associated with an experiment.
 
-**Milestone 2 — measurement layer:** routed traffic, ICMP telemetry, iperf3 throughput collection, PCAP support, flow analytics and controlled resilience experiments.
+**Reproducibility over screenshots.** A useful result should be repeatable from the lab instructions.
 
-Next: automated convergence measurement, route/path intelligence, persistent experiment history and the operator dashboard.
+**No artificial AI layer.** Machine learning is not added merely as a portfolio keyword. The central problem is network engineering.
+
+## Repository map
+
+```text
+topology/       virtual network definition
+routing/        FRR routing configuration
+telemetry/      network measurements and route inspection
+traffic/        traffic-generation scenarios
+analytics/      metric, path and PCAP analysis
+storage/        persistent experiment history
+api/            FastAPI interface
+dashboard/      operator console
+experiments/    controlled failure experiments
+tests/          automated tests
+docs/           lab and engineering documentation
+scripts/        operational helpers
+```
 
 ## Limitations
 
-This is a virtual lab. Results depend on the host, Docker networking, kernel scheduling and experiment parameters. They should not be interpreted as production-network performance benchmarks.
+This is a reproducible virtual lab, not a production network. Results depend on the host, container runtime, routing timers and generated traffic profile.
+
+The project does not claim that lab measurements represent carrier, enterprise or maritime production performance.
+
+## Roadmap
+
+See [docs/roadmap.md](docs/roadmap.md).
 
 ## License
 
