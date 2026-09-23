@@ -8,31 +8,33 @@
 </head>
 <body>
 <header class="topbar">
-<div><p class="eyebrow">NETFABRIC</p><h1>Network Operations Console</h1><p class="muted">Virtual routing lab · measurement and resilience telemetry</p></div>
+<div><p class="eyebrow">NETFABRIC</p><h1>Network Operations Console</h1><p class="muted">Routing · traffic · resilience · evidence</p></div>
 <div class="status"><span></span> LAB READY</div>
 </header>
 <main>
 <section class="cards">
 <article><span>ROUTERS</span><strong>4</strong><small>FRR nodes</small></article>
-<article><span>PATHS</span><strong>2</strong><small>redundant routes</small></article>
+<article><span>REDUNDANT PATHS</span><strong>2</strong><small>R1 → R4</small></article>
 <article><span>P95 LATENCY</span><strong id="latency">—</strong><small>milliseconds</small></article>
-<article><span>LOSS</span><strong id="loss">—</strong><small>packet loss</small></article>
+<article><span>PACKET LOSS</span><strong id="loss">—</strong><small>percent</small></article>
 </section>
+
 <section class="grid">
 <article class="panel topology">
-<div class="panel-head"><h2>Topology</h2><span>R1 → R4</span></div>
-<div class="network"><div class="node edge">CLIENT</div><div class="node">R1<br><small>OSPF</small></div><div class="paths"><div>R2</div><div>R3</div></div><div class="node">R4<br><small>OSPF</small></div><div class="node edge">SERVER</div></div>
-<p class="note">Redundant routed paths support controlled failure and convergence experiments.</p>
+<div class="panel-head"><h2>Topology</h2><span>OSPF AREA 0</span></div>
+<div class="network"><div class="node edge">CLIENT</div><div class="node">R1<br><small>INGRESS</small></div><div class="paths"><div>R2</div><div>R3</div></div><div class="node">R4<br><small>EGRESS</small></div><div class="node edge">SERVER</div></div>
+<p class="note">Two routed paths provide the redundancy used by controlled failure experiments.</p>
 </article>
 <article class="panel">
-<div class="panel-head"><h2>Routing state</h2><span>LIVE API</span></div>
+<div class="panel-head"><h2>Routing state</h2><span>LIVE</span></div>
 <div id="routeState" class="route-state"><p>Waiting for inspection…</p></div>
 <button id="inspect">Inspect R1 route</button>
 </article>
 </section>
+
 <section class="grid">
 <article class="panel">
-<div class="panel-head"><h2>Performance</h2><span>MEASUREMENTS</span></div>
+<div class="panel-head"><h2>Performance</h2><span>LAB MEASUREMENTS</span></div>
 <div class="metric-row"><span>Mean latency</span><strong id="mean">—</strong></div>
 <div class="metric-row"><span>Median latency</span><strong id="median">—</strong></div>
 <div class="metric-row"><span>P95 latency</span><strong id="p95">—</strong></div>
@@ -43,12 +45,24 @@
 <div id="experiments"></div>
 </article>
 </section>
+
+<section class="grid">
+<article class="panel">
+<div class="panel-head"><h2>Latency history</h2><span>TIME SERIES</span></div>
+<div id="chart" class="chart"><p class="note">No persisted measurements yet.</p></div>
+</article>
+<article class="panel">
+<div class="panel-head"><h2>Experiment comparison</h2><span>HISTORY</span></div>
+<div id="comparison"></div>
+</article>
+</section>
+
 <section class="panel history-panel">
-<div class="panel-head"><h2>Measurement history</h2><span>PERSISTED</span></div>
+<div class="panel-head"><h2>Measurement evidence</h2><span>PERSISTED</span></div>
 <div id="history"></div>
 </section>
 </main>
-<footer>NetFabric · raw observations remain separate from derived analytics</footer>
+<footer>NetFabric · measurements originate from the virtual network lab</footer>
 <script src="app.js"></script>
 </body>
 </html>
