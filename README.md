@@ -4,14 +4,15 @@
 
 NetFabric is a reproducible virtual network lab for studying **routing, traffic behaviour, telemetry and network resilience**.
 
-Instead of simulating a network entirely inside a dashboard, NetFabric runs a small routed topology with FRRouting, generates measurable traffic, collects network evidence and exposes the observations through an API and operations console.
+It runs a routed topology with FRRouting, generates measurable traffic, collects network evidence, stores experiment history, and exposes the observations through a FastAPI service and operations console.
 
-### What it demonstrates
+**Core story:** build the network → configure routing → generate traffic → measure behaviour → introduce failure → observe recovery → preserve evidence.
+
+### Technical focus
 
 - Linux/container networking
 - IPv4 subnetting and routed segments
-- FRRouting
-- OSPF
+- FRRouting and OSPF
 - Route and next-hop inspection
 - ICMP and iperf3 measurements
 - Latency, packet loss and throughput analysis
@@ -19,145 +20,134 @@ Instead of simulating a network entirely inside a dashboard, NetFabric runs a sm
 - Persistent experiment history
 - Controlled link-failure testing
 - Route convergence observation
-- Network operations dashboard
 - Python/FastAPI automation
-- Automated tests and CI
+- Automated testing and CI
 
 ## Architecture
 
 ```text
-                    ┌───────────────┐
-                    │ Traffic /     │
-                    │ Test Endpoints│
-                    └───────┬───────┘
-                            │
-                       ┌────▼────┐
-                       │   R1    │
-                       │  FRR    │
-                       └──┬───┬──┘
-                          │   │
-                    ┌─────▼┐ ┌▼─────┐
-                    │  R2  │ │  R3  │
-                    │ FRR  │ │ FRR  │
-                    └───┬──┘ └──┬───┘
-                        │        │
-                        └───┬────┘
-                            │
-                       ┌────▼────┐
-                       │   R4    │
-                       │  FRR    │
-                       └────┬────┘
-                            │
-                       ┌────▼────┐
-                       │ Endpoint│
-                       └─────────┘
+Traffic endpoints
+       │
+       ▼
+   ┌───────┐
+   │  R1   │
+   │  FRR  │
+   └──┬─┬──┘
+      │ │
+   ┌──▼─┐ ┌▼───┐
+   │ R2 │ │ R3 │   redundant paths
+   │FRR │ │FRR │
+   └─┬──┘ └──┬─┘
+      │      │
+      └──┬───┘
+         ▼
+      ┌─────┐
+      │ R4  │
+      │ FRR │
+      └──┬──┘
+         │
+      Endpoint
 
-          routing / traffic / packet evidence
-                         │
-                    ┌────▼────┐
-                    │Telemetry│
-                    └────┬────┘
-                         │
-                    ┌────▼────┐
-                    │Analytics│
-                    └────┬────┘
-                         │
-                    ┌────▼────┐
-                    │ FastAPI │
-                    └────┬────┘
-                         │
-                    ┌────▼────┐
-                    │ Console │
-                    └─────────┘
+        │ observations
+        ▼
+ Telemetry → Analytics → SQLite → FastAPI → Operations Console
 ```
 
-## Signature experiment: controlled link failure
+## Quick start
 
-The topology contains redundant paths. A failure experiment deliberately disables a routed interface and observes:
+Run the Python tests:
+
+```bash
+pip install -r requirements.txt
+pytest -q
+```
+
+For the complete network lab, follow **[docs/lab.md](docs/lab.md)**.
+
+Start the API:
+
+```bash
+uvicorn api.main:app --reload
+```
+
+Serve the console:
+
+```bash
+python -m http.server 8080 --directory dashboard
+```
+
+## Signature experiment
+
+NetFabric includes a controlled link-failure experiment using redundant routed paths.
+
+The experiment records:
 
 1. failure injection
 2. route-state change
 3. alternate-path selection
 4. traffic recovery
-5. convergence time
+5. convergence timing
 6. before/after evidence
 
-The result is saved as machine-readable JSON alongside the raw route observations.
-
-## Quick start
-
-Install the Python dependencies:
+Run:
 
 ```bash
-pip install -r requirements.txt
+./experiments/run_convergence.sh
 ```
 
-Run the unit tests:
+The resulting artifacts are written under `results/`.
 
-```pytest -q
-```
-
-For the full network lab, see **[docs/lab.md](docs/lab.md)**.
-
-Start the API:
-
-```uvicorn api.main:app --reload```
-
-Serve the console:
-
-```python -m http.server 8080 --directory dashboard```
-
-Then open port 8080 locally.
-
-## API surface
+## API
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /health` | service health |
-| `POST /api/v1/routes/inspect` | inspect a router's route |
-| `POST /api/v1/measurements/ping` | run and persist an ICMP measurement |
-| `POST /api/v1/measurements` | record a measurement |
-| `GET /api/v1/measurements` | retrieve experiment evidence |
-| `GET /api/v1/analytics/series` | time-series data |
-| `GET /api/v1/analytics/experiments` | experiment comparison |
-| `POST /api/v1/analytics/pcap` | summarize a PCAP |
+| `POST /api/v1/routes/inspect` | inspect route state |
+| `POST /api/v1/measurements/ping` | run and persist ICMP measurement |
+| `POST /api/v1/measurements` | store a measurement |
+| `GET /api/v1/measurements` | retrieve evidence |
+| `GET /api/v1/analytics/series` | retrieve time-series data |
+| `GET /api/v1/analytics/experiments` | compare experiments |
+| `POST /api/v1/analytics/pcap` | analyze a PCAP |
 
 ## Engineering principles
 
-**Network first.** The dashboard is a consumer of network state, not the source of it.
+**Network first.** The network and routing layer own state; the dashboard only presents it.
 
-**Evidence over claims.** Measurements are timestamped and associated with an experiment.
+**Evidence over claims.** Measurements carry timestamps, experiment IDs, units and sources.
 
-**Reproducibility over screenshots.** A useful result should be repeatable from the lab instructions.
+**Reproducibility over screenshots.** The project is designed to be run, measured and repeated.
 
-**No artificial AI layer.** Machine learning is not added merely as a portfolio keyword. The central problem is network engineering.
+**No artificial AI layer.** Machine learning is not included simply as a portfolio keyword.
 
-## Repository map
+## Validation
+
+Before presenting the project, use **[docs/validation.md](docs/validation.md)**.
+
+Measured experiment observations belong in **[docs/results.md](docs/results.md)**. The repository deliberately does not publish fabricated performance numbers.
+
+## Repository structure
 
 ```text
 topology/       virtual network definition
-routing/        FRR routing configuration
-telemetry/      network measurements and route inspection
-traffic/        traffic-generation scenarios
+routing/        FRR configuration
+telemetry/      measurements and route inspection
+traffic/        traffic scenarios
 analytics/      metric, path and PCAP analysis
-storage/        persistent experiment history
-api/            FastAPI interface
-dashboard/      operator console
+storage/        experiment history
+api/            FastAPI service
+dashboard/      operations console
 experiments/    controlled failure experiments
 tests/          automated tests
-docs/           lab and engineering documentation
+docs/           lab, validation and engineering notes
 scripts/        operational helpers
 ```
 
 ## Limitations
 
-This is a reproducible virtual lab, not a production network. Results depend on the host, container runtime, routing timers and generated traffic profile.
+NetFabric is a reproducible virtual lab, not a production network. Results depend on the host, container runtime, topology and routing timers.
 
-The project does not claim that lab measurements represent carrier, enterprise or maritime production performance.
-
-## Roadmap
-
-See [docs/roadmap.md](docs/roadmap.md).
+Local measurements must not be interpreted as production-network benchmarks.
 
 ## License
 
