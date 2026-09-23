@@ -1,5 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel, Field
 
 from analytics.metrics import packet_loss, summarize_latency
 from analytics.path import hop_count
@@ -9,31 +12,38 @@ from storage.store import recent, record
 from telemetry.ping import result_dict, run_ping
 from telemetry.routes import inspect_route
 
-app = FastAPI(title="NetFabric API", version="0.5.0")
+app = FastAPI(title="NetFabric API", version="0.6.0")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
 
 
 class PingRequest(BaseModel):
     target: str
-    count: int = 5
-    experiment_id: str = "ad-hoc-ping"
+    count: int = Field(default=5, ge=1, le=100)
+    experiment_id: str = Field(default="ad-hoc-ping", min_length=1, max_length=100)
 
 
 class RouteRequest(BaseModel):
-    router: str
-    destination: str
+    router: str = Field(min_length=1, max_length=64)
+    destination: str = Field(min_length=1, max_length=64)
 
 
 class MeasurementRequest(BaseModel):
-    experiment_id: str
-    metric: str
+    experiment_id: str = Field(min_length=1, max_length=100)
+    metric: str = Field(min_length=1, max_length=100)
     value: float
-    unit: str
-    source: str
-    target: str | None = None
+    unit: str = Field(min_length=1, max_length=32)
+    source: str = Field(min_length=1, max_length=64)
+    target: str | None = Field(default=None, max_length=128)
 
 
 class PcapRequest(BaseModel):
-    path: str
+    path: str = Field(min_length=1, max_length=512)
 
 
 @app.get("/health")
@@ -66,9 +76,11 @@ def ping(request: PingRequest) -> dict:
 
 @app.post("/api/v1/routes/inspect")
 def route_inspect(request: RouteRequest) -> dict:
-    if not request.router or not request.destination:
-        raise HTTPException(status_code=400, detail="router and destination are required")
-    result = inspect_route(request.router, request.destination)
+    try:
+        result = inspect_route(request.router, request.destination)
+    except (OSError, ValueError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
     return {
         "router": result.router,
         "destination": result.destination,
@@ -81,32 +93,43 @@ def route_inspect(request: RouteRequest) -> dict:
 
 @app.post("/api/v1/measurements")
 def add_measurement(request: MeasurementRequest) -> dict:
-    record(request.experiment_id, request.metric, request.value,
-           request.unit, request.source, request.target)
+    record(
+        request.experiment_id, request.metric, request.value,
+        request.unit, request.source, request.target,
+    )
     return {"status": "recorded"}
 
 
 @app.get("/api/v1/measurements")
 def measurements(experiment_id: str | None = None, limit: int = 100) -> list[dict]:
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     return recent(experiment_id, limit)
 
 
 @app.get("/api/v1/analytics/series")
 def series(metric: str = "latency_avg", limit: int = 500) -> dict:
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     rows = recent(limit=limit)
     return {"metric": metric, "series": group_metric_series(rows, metric)}
 
 
 @app.get("/api/v1/analytics/experiments")
 def experiment_comparison(limit: int = 500) -> list[dict]:
+    if limit < 1 or limit > 1000:
+        raise HTTPException(status_code=400, detail="limit must be between 1 and 1000")
     return experiment_summary(recent(limit=limit))
 
 
 @app.post("/api/v1/analytics/pcap")
 def pcap_analysis(request: PcapRequest) -> dict:
+    path = Path(request.path)
+    if not path.is_file():
+        raise HTTPException(status_code=404, detail="PCAP file not found")
     try:
-        return summarize_pcap(request.path)
-    except (OSError, RuntimeError) as exc:
+        return summarize_pcap(path)
+    except (OSError, RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
