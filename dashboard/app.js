@@ -19,8 +19,30 @@ async function loadSummary() {
     set("latency", data.latency.p95_ms.toFixed(2));
     set("loss", data.packet_loss_pct.toFixed(2) + "%");
     set("lossDetail", data.packet_loss_pct.toFixed(2) + "%");
-  } catch (error) {
+  } catch {
     document.querySelector(".status").innerHTML = "<span></span> API OFFLINE";
+  }
+}
+
+async function loadHistory() {
+  const target = document.getElementById("history");
+  if (!target) return;
+
+  try {
+    const rows = await get("/api/v1/measurements?limit=20");
+    if (!rows.length) {
+      target.innerHTML = "<p class='note'>No persisted measurements yet. Run a lab measurement.</p>";
+      return;
+    }
+
+    target.innerHTML = rows.map(row =>
+      '<div class="history-row"><span>' + row.metric +
+      '</span><strong>' + Number(row.value).toFixed(2) + ' ' + row.unit +
+      '</strong><small>' + row.experiment_id + ' · ' +
+      new Date(row.timestamp).toLocaleString() + '</small></div>'
+    ).join("");
+  } catch {
+    target.innerHTML = "<p class='note'>Measurement history unavailable.</p>";
   }
 }
 
@@ -30,8 +52,8 @@ async function loadExperiments() {
     const experiments = await get("/api/v1/experiments");
     target.innerHTML = experiments.map(item =>
       '<div class="experiment"><strong>' + item.name +
-      '</strong><span class="badge">' + item.status.toUpperCase() + "</span><br><small>" +
-      item.id + "</small></div>"
+      '</strong><span class="badge">' + item.status.toUpperCase() +
+      "</span><br><small>" + item.id + "</small></div>"
     ).join("");
   } catch {
     target.innerHTML = "<p class='note'>API unavailable.</p>";
@@ -58,4 +80,5 @@ document.getElementById("inspect").addEventListener("click", async () => {
 });
 
 loadSummary();
+loadHistory();
 loadExperiments();
