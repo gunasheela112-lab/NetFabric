@@ -3,20 +3,31 @@ from pydantic import BaseModel
 
 from analytics.metrics import packet_loss, summarize_latency
 from analytics.path import hop_count
+from storage.store import recent, record
 from telemetry.ping import result_dict, run_ping
 from telemetry.routes import inspect_route
 
-app = FastAPI(title="NetFabric API", version="0.3.0")
+app = FastAPI(title="NetFabric API", version="0.4.0")
 
 
 class PingRequest(BaseModel):
     target: str
     count: int = 5
+    experiment_id: str = "ad-hoc-ping"
 
 
 class RouteRequest(BaseModel):
     router: str
     destination: str
+
+
+class MeasurementRequest(BaseModel):
+    experiment_id: str
+    metric: str
+    value: float
+    unit: str
+    source: str
+    target: str | None = None
 
 
 @app.get("/health")
@@ -37,7 +48,24 @@ def metrics_summary() -> dict:
 @app.post("/api/v1/measurements/ping")
 def ping(request: PingRequest) -> dict:
     try:
-        return result_dict(run_ping(request.target, request.count))
+        result = run_ping(request.target, request.count)
+        record(
+            request.experiment_id,
+            "latency_avg",
+            result.avg_ms or 0.0,
+            "ms",
+            "icmp",
+            request.target,
+        )
+        record(
+            request.experiment_id,
+            "packet_loss",
+            result.loss_pct,
+            "percent",
+            "icmp",
+            request.target,
+        )
+        return result_dict(result)
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -57,9 +85,27 @@ def route_inspect(request: RouteRequest) -> dict:
     }
 
 
+@app.post("/api/v1/measurements")
+def add_measurement(request: MeasurementRequest) -> dict:
+    record(
+        request.experiment_id,
+        request.metric,
+        request.value,
+        request.unit,
+        request.source,
+        request.target,
+    )
+    return {"status": "recorded"}
+
+
+@app.get("/api/v1/measurements")
+def measurements(experiment_id: str | None = None, limit: int = 100) -> list[dict]:
+    return recent(experiment_id, limit)
+
+
 @app.get("/api/v1/metrics")
 def metrics() -> dict:
-    return {"status": "ready", "source": "lab"}
+    return {"status": "ready", "source": "lab", "storage": "sqlite"}
 
 
 @app.get("/api/v1/experiments")
