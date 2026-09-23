@@ -1,21 +1,15 @@
 # Telemetry
 
-Telemetry is intentionally collected from the running lab.
+Telemetry is collected from the running lab.
 
-## Ping
+Collectors currently cover:
 
-The Python collector wraps the system `ping` utility and extracts packet loss and RTT statistics.
+- ICMP RTT and packet loss
+- iperf3 JSON throughput
+- tcpdump PCAP capture
 
-Example:
+The project keeps collection separate from analytics so raw observations can be inspected independently of derived metrics.
 
-```python
-from telemetry.ping import run_ping
+## PCAP
 
-print(run_ping("10.0.24.2", count=5))
-```
-
-## iperf3
-
-The iperf3 collector requests JSON output so throughput measurements can be processed without scraping human-readable terminal output.
-
-The collectors do not invent measurements. If the underlying command fails, the failure is surfaced to the caller.
+A packet capture should be treated as an experiment artifact. Do not commit large captures to Git; store them locally under `captures/`.
