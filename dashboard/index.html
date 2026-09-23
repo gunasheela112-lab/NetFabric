@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>NetFabric Operations Console</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">NETFABRIC</p>
+      <h1>Network Operations Console</h1>
+      <p class="muted">Virtual routing lab · live measurement surface</p>
+    </div>
+    <div class="status"><span></span> LAB READY</div>
+  </header>
+
+  <main>
+    <section class="cards">
+      <article><span>ROUTERS</span><strong id="routers">4</strong><small>FRR nodes</small></article>
+      <article><span>PATHS</span><strong id="paths">2</strong><small>redundant routes</small></article>
+      <article><span>LATENCY</span><strong id="latency">—</strong><small>p95 ms</small></article>
+      <article><span>LOSS</span><strong id="loss">—</strong><small>packet loss</small></article>
+    </section>
+
+    <section class="grid">
+      <article class="panel topology">
+        <div class="panel-head"><h2>Topology</h2><span>R1 → R4</span></div>
+        <div class="network">
+          <div class="node edge">CLIENT</div>
+          <div class="node">R1<br><small>10.0.12.1</small></div>
+          <div class="paths"><div>R2</div><div>R3</div></div>
+          <div class="node">R4<br><small>10.0.24.2</small></div>
+          <div class="node edge">SERVER</div>
+        </div>
+        <p class="note">Two routed paths provide the redundancy used by the resilience experiment.</p>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Routing state</h2><span>OSPF</span></div>
+        <div id="routeState" class="route-state">
+          <p>Waiting for API route inspection…</p>
+        </div>
+        <button id="inspect">Inspect R1 route</button>
+      </article>
+    </section>
+
+    <section class="grid">
+      <article class="panel">
+        <div class="panel-head"><h2>Performance</h2><span>LAB MEASUREMENTS</span></div>
+        <div class="metric-row"><span>Mean latency</span><strong id="mean">—</strong></div>
+        <div class="metric-row"><span>Median latency</span><strong id="median">—</strong></div>
+        <div class="metric-row"><span>P95 latency</span><strong id="p95">—</strong></div>
+        <div class="metric-row"><span>Packet loss</span><strong id="lossDetail">—</strong></div>
+      </article>
+
+      <article class="panel">
+        <div class="panel-head"><h2>Experiments</h2><span>CONTROLLED</span></div>
+        <div id="experiments"></div>
+      </article>
+    </section>
+  </main>
+
+  <footer>NetFabric · measurements originate from the virtual network lab</footer>
+  <script src="app.js"></script>
+</body>
+</html>
