@@ -37,7 +37,7 @@ END_NS=$(date +%s%N)
 echo "Route after convergence:"
 docker exec "clab-netfabric-$ROUTER" vtysh -c "show ip route $TARGET" | tee results/convergence_after.txt
 
-python - "$START_NS" "$END_NS" "$recovered" <<'PY'
+python3 - "$START_NS" "$END_NS" "$recovered" <<'PY'
 import json
 import sys
 
