@@ -9,3 +9,5 @@ captures/
 data/raw/
 data/generated/
 .DS_Store
+
+topology/clab-netfabric/
