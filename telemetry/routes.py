@@ -30,5 +30,5 @@ def inspect_route(router: str, destination: str) -> RoutePath:
         protocol = protocol_match.group(1).lower()
 
     hops = tuple(re.findall(r'(\d+\.\d+\.\d+\.\d+),\s+via\b', raw))
-    interfaces = tuple(re.findall(r',\s+([A-Za-z0-9_.-]+),', raw))
+    interfaces = tuple(re.findall(r'via\s+([A-Za-z0-9_.-]+),', raw))
     return RoutePath(router, destination, protocol, hops, interfaces, raw)
