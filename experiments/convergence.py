@@ -41,4 +41,4 @@ def route_observation(router: str, route: str) -> RouteObservation:
 def convergence_seconds(before: RouteObservation, after: RouteObservation) -> float:
     if after.timestamp < before.timestamp:
         raise ValueError("after observation must be later than before observation")
-    return after.timestamp - before.timestamp
+    return round(after.timestamp - before.timestamp, 6)
