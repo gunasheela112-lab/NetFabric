@@ -1,6 +1,6 @@
 Routing entry for 10.20.20.0/24
   Known via "ospf", distance 110, metric 30, best
-  Last update 00:01:00 ago
+  Last update 00:00:00 ago
   Flags: Selected 
   Status: Installed 
     10.0.12.2, via eth1 inactive, weight 1
