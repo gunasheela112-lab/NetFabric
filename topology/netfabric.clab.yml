@@ -49,6 +49,8 @@ topology:
     client:
       kind: linux
       image: networkstatic/iperf3:latest
+      entrypoint: /bin/sh
+      cmd: -c "sleep infinity"
       exec:
         - ip addr add 10.10.10.10/24 dev eth1
         - ip link set eth1 up
@@ -57,6 +59,8 @@ topology:
     server:
       kind: linux
       image: networkstatic/iperf3:latest
+      entrypoint: /bin/sh
+      cmd: -c "sleep infinity"
       exec:
         - ip addr add 10.20.20.20/24 dev eth1
         - ip link set eth1 up
