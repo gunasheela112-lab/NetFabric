@@ -25,10 +25,10 @@ def inspect_route(router: str, destination: str) -> RoutePath:
     )
     raw = completed.stdout + completed.stderr
     protocol = None
-    protocol_match = re.search(r"^s*([A-Z])>*?s+", raw, re.MULTILINE)
+    protocol_match = re.search(r'^\s*([A-Za-z])(?:[>* ]|$)', raw, re.MULTILINE)
     if protocol_match:
-        protocol = protocol_match.group(1)
+        protocol = protocol_match.group(1).lower()
 
-    hops = tuple(re.findall(r"vias+(d+.d+.d+.d+)", raw))
-    interfaces = tuple(re.findall(r",s+([A-Za-z0-9_.-]+),", raw))
+    hops = tuple(re.findall(r'via\s+(\d+\.\d+\.\d+\.\d+)', raw))
+    interfaces = tuple(re.findall(r',\s+([A-Za-z0-9_.-]+),', raw))
     return RoutePath(router, destination, protocol, hops, interfaces, raw)
