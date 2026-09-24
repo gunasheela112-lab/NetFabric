@@ -53,6 +53,42 @@ Traffic endpoints
  Telemetry → Analytics → SQLite → FastAPI → Operations Console
 ```
 
+## Lab Evidence
+
+The screenshots below are captured from the working Containerlab/FRRouting environment and show the project from deployment through routing, traffic measurement and failure recovery.
+
+### 1. Lab deployment
+
+All six lab nodes are running: four FRRouting routers plus client and server endpoints.
+
+![NetFabric lab deployment](docs/screenshots/01-deployment.png)
+
+### 2. Redundant routed topology
+
+The topology contains two routed paths between R1 and R4: **R1 → R2 → R4** and **R1 → R3 → R4**.
+
+![NetFabric redundant topology](docs/screenshots/02-topology.png)
+
+### 3. OSPF route state
+
+OSPF installs two equal-cost next hops toward the server network `10.20.20.0/24`.
+
+![NetFabric OSPF route evidence](docs/screenshots/03-ospf.png)
+
+### 4. Real traffic performance
+
+A 10-second TCP test transferred **7.68 GBytes at 6.60 Gbit/s with 0 retransmissions**.
+
+![NetFabric traffic performance](docs/screenshots/04-traffic.png)
+
+### 5. Controlled failure and convergence
+
+A controlled R1 `eth1` failure removes one path while OSPF retains the redundant R1 → R3 → R4 path. The recorded run converged in **0.07993 seconds (~79.9 ms)** and recovered successfully.
+
+![NetFabric resilience and convergence](docs/screenshots/05-convergence.png)
+
+> These are local virtual-lab measurements, not production-network benchmarks. Results depend on the host, container runtime, topology and routing timers.
+
 ## Quick start
 
 Run the Python tests:
