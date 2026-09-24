@@ -4,7 +4,7 @@ topology:
   nodes:
     r1:
       kind: linux
-      image: quay.io/frrouting/frr:latest
+      image: quay.io/frrouting/frr:10.7.1
       binds:
         - ../routing/frr/r1:/etc/frr
       exec:
@@ -15,7 +15,7 @@ topology:
 
     r2:
       kind: linux
-      image: quay.io/frrouting/frr:latest
+      image: quay.io/frrouting/frr:10.7.1
       binds:
         - ../routing/frr/r2:/etc/frr
       exec:
@@ -26,7 +26,7 @@ topology:
 
     r3:
       kind: linux
-      image: quay.io/frrouting/frr:latest
+      image: quay.io/frrouting/frr:10.7.1
       binds:
         - ../routing/frr/r3:/etc/frr
       exec:
@@ -37,7 +37,7 @@ topology:
 
     r4:
       kind: linux
-      image: quay.io/frrouting/frr:latest
+      image: quay.io/frrouting/frr:10.7.1
       binds:
         - ../routing/frr/r4:/etc/frr
       exec:
