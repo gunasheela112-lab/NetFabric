@@ -1,5 +1,11 @@
 # NetFabric
 
+![Python](https://img.shields.io/badge/Python-3.12-blue)
+![FRRouting](https://img.shields.io/badge/FRRouting-10.7.1-blue)
+![Containerlab](https://img.shields.io/badge/Containerlab-0.79.0-orange)
+![CI](https://img.shields.io/badge/CI-GitHub%20Actions-success)
+![License](https://img.shields.io/badge/License-MIT-green)
+
 ## Network Engineering & Traffic Intelligence Lab
 
 NetFabric is a reproducible virtual network lab for studying **routing, traffic behaviour, telemetry and network resilience**.
